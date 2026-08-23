@@ -1,0 +1,6 @@
+{
+  "hotkey": "ctrl+alt+shift+v",
+  "max_history": 500,
+  "poll_interval_seconds": 0.5,
+  "popup_max_results": 200
+}
