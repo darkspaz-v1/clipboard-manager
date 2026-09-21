@@ -56,7 +56,7 @@ system tray.
 ```
 venv\Scripts\python -m pip install -r requirements-dev.txt
 venv\Scripts\python -m pytest
-venv\Scriptsuff check .
+venv\Scripts\python -m ruff check .
 ```
 
 The tests cover the pure logic (history cap, dedup, search) against a temporary SQLite file; they never
