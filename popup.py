@@ -1,6 +1,8 @@
 import tkinter as tk
 from datetime import datetime, timezone
 
+from history import filter_clips
+
 INK = "#12131C"
 PANEL_SELECTED = "#20263E"
 HAIRLINE = "#2E3044"
@@ -155,8 +157,7 @@ class ClipPopup:
         self._refresh()
 
     def _refresh(self):
-        query = self.entry.get().lower().strip()
-        items = self._all_items if not query else [it for it in self._all_items if query in it["text"].lower()]
+        items = filter_clips(self._all_items, self.entry.get())
         self._filtered = items[:RENDER_CAP]
         self._selected = 0
         shown = len(self._filtered)
