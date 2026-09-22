@@ -6,6 +6,15 @@ from pathlib import Path
 DB_PATH = Path(__file__).parent / "history.db"
 
 
+def filter_clips(items, query):
+    """Case-insensitive substring filter over clip dicts (the popup's search box).
+    A blank/whitespace-only query returns everything, unchanged and in order."""
+    query = (query or "").lower().strip()
+    if not query:
+        return list(items)
+    return [it for it in items if query in it["text"].lower()]
+
+
 class History:
     def __init__(self, db_path=DB_PATH, max_entries=500):
         self.db_path = db_path

@@ -1,5 +1,7 @@
 # Clipboard Manager
 
+[![CI](https://github.com/darkspaz-v1/clipboard-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/darkspaz-v1/clipboard-manager/actions/workflows/ci.yml)
+
 A searchable history of everything you have copied, recallable without leaving the keyboard.
 
 Windows keeps one clipboard slot, so copying anything destroys what was there before. This watches the
@@ -38,14 +40,32 @@ framework — the only thing they share is a set of conventions.
 | Config lives in `config.json`, read at startup | Edit it, then fully exit the tray icon and relaunch — a running process never re-reads it |
 | Tray icon generated in code (`icon.py`) | No binary asset to keep in sync |
 
-## Running it
+## Install and run
 
 ```
+python -m venv venv
+venv\Scripts\python -m pip install -r requirements.txt
 run.bat
 ```
 
-That creates the virtualenv on first run, installs `requirements.txt`, and starts the app. Windows
-only — these use Win32 APIs and a system tray.
+`run.bat` launches the app from `venv\` with no console window. Windows only - these use Win32 APIs and a
+system tray.
+
+## Tests
+
+```
+venv\Scripts\python -m pip install -r requirements-dev.txt
+venv\Scripts\python -m pytest
+venv\Scripts\python -m ruff check .
+```
+
+The tests cover the pure logic (history cap, dedup, search) against a temporary SQLite file; they never
+start the tray icon, popup or hotkey.
+
+## Troubleshooting: log file location
+
+Warnings and errors are written to `logs/clipboard-manager.log` in the app folder (rotating, gitignored).
+A crash on startup also appends a traceback to `app_error.log` next to it.
 
 ## License
 

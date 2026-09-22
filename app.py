@@ -1,4 +1,5 @@
 import json
+import logging
 import msvcrt
 import queue
 import threading
@@ -13,6 +14,7 @@ from PIL import ImageTk
 
 from history import History
 from icon import app_icon
+from log_setup import setup_logging
 from popup import ClipPopup
 
 APP_DIR = Path(__file__).parent
@@ -20,6 +22,7 @@ CONFIG_PATH = APP_DIR / "config.json"
 LOCK_PATH = APP_DIR / ".singleton.lock"
 SHOW_SIGNAL_PATH = APP_DIR / ".show_signal"
 _lock_file = None
+log = logging.getLogger("clipboard-manager")
 
 
 def _acquire_single_instance_lock():
@@ -42,8 +45,9 @@ def _acquire_single_instance_lock():
         f.close()
         try:
             SHOW_SIGNAL_PATH.touch()
-        except OSError:
-            pass
+        except OSError as e:
+            # Best effort: the second instance is exiting anyway; the user just won't see the popup.
+            log.debug("could not write show-signal file: %s", e)
         return False
     _lock_file = f
     return True
@@ -96,8 +100,9 @@ class ClipboardManagerApp:
         if SHOW_SIGNAL_PATH.exists():
             try:
                 SHOW_SIGNAL_PATH.unlink()
-            except OSError:
-                pass
+            except OSError as e:
+                # Best effort: worst case the popup is shown again on the next tick.
+                log.debug("could not remove show-signal file: %s", e)
             self.popup.show()
         self.root.after(50, self._drain_ui_queue)
 
@@ -111,14 +116,23 @@ class ClipboardManagerApp:
     def poll_clipboard(self):
         try:
             self._last_seen = pyperclip.paste()
-        except Exception:
+        except (pyperclip.PyperclipException, OSError) as e:
+            # Clipboard briefly locked by another app; the poll loop below retries.
+            log.debug("initial clipboard read failed: %s", e)
             self._last_seen = None
+        paste_failing = False
         while not self._stop.is_set():
             time.sleep(self.config["poll_interval_seconds"])
             try:
                 current = pyperclip.paste()
-            except Exception:
+            except (pyperclip.PyperclipException, OSError) as e:
+                # Another app holding the clipboard is routine; keep polling, but log the
+                # first failure of a streak (at WARNING) so a permanent fault is visible.
+                if not paste_failing:
+                    log.warning("clipboard read failed (will keep retrying): %s", e)
+                    paste_failing = True
                 continue
+            paste_failing = False
             if current and current != self._last_seen:
                 self._last_seen = current
                 self.history.add(current)
@@ -133,8 +147,9 @@ class ClipboardManagerApp:
         self._stop.set()
         try:
             keyboard.remove_hotkey(self.config["hotkey"])
-        except Exception:
-            pass
+        except (KeyError, ValueError) as e:
+            # Hotkey was never registered (see run()) or is already gone; nothing to undo.
+            log.debug("remove_hotkey skipped: %s", e)
         if self.icon:
             self.icon.stop()
         self._post(self.root.quit)
@@ -156,7 +171,8 @@ class ClipboardManagerApp:
 
         try:
             keyboard.add_hotkey(self.config["hotkey"], self.show_popup)
-        except Exception as e:
+        except (ValueError, KeyError, OSError) as e:
+            log.warning("could not register hotkey %s: %s", self.config["hotkey"], e)
             print(f"Warning: could not register hotkey {self.config['hotkey']}: {e}")
 
         self.root.mainloop()
@@ -170,9 +186,11 @@ def main():
 
 
 if __name__ == "__main__":
+    setup_logging()
     try:
         main()
     except Exception:
+        log.exception("fatal error")
         import traceback
 
         with open(APP_DIR / "app_error.log", "a", encoding="utf-8") as f:
