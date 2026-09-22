@@ -4,6 +4,8 @@
 
 A searchable history of everything you have copied, recallable without leaving the keyboard.
 
+![Clipboard History popup showing a searchable list of recent clips against a dark UI](docs/media/screenshot.png)
+
 Windows keeps one clipboard slot, so copying anything destroys what was there before. This watches the
 clipboard from the tray and keeps the last 500 text clips in a local SQLite database, so an overwrite
 is no longer a loss.
@@ -18,14 +20,24 @@ is no longer a loss.
 
 ## Notes from building it
 
-- **Dedup is exact-text-match.** The same text with one stray leading space counts as a separate
-  entry. Known, not fixed — it is visible in real history data.
 - The popup originally rebuilt every row on each hover and arrow-key move, which flickered visibly.
   Fixed by restyling only the row that changed.
-- `history.db` holds whatever you copied, which can include passwords pasted from a manager. It is
-  gitignored, and it is worth knowing the file exists before pointing any backup tool at this folder.
+- See [Known limitations](#known-limitations) below for the dedup quirk and the `history.db` privacy
+  note.
 
 **Stack:** Python, Tkinter, SQLite, `keyboard`, `pystray`, Pillow.
+
+## Known limitations
+
+- **Windows only.** Uses Win32 APIs (global hotkey, tray icon) with no Mac/Linux support planned.
+- **`history.db` can contain sensitive pasted content.** Every text copy is written to this local
+  SQLite file in plain text — passwords copied from a manager, tokens, personal messages, anything.
+  It is gitignored and never leaves the machine on its own, but it is not encrypted, so back it up or
+  sync it with the same care you would give a password file, and be aware it exists before pointing
+  any cloud-backup tool at this folder.
+- **Dedup is exact-text-match, not trimmed.** Recopying identical text bumps the existing row to the
+  top, but the same text with a stray leading/trailing whitespace character is treated as a different
+  entry and creates a new row instead of bumping the old one.
 
 ## Part of a suite
 
@@ -40,7 +52,7 @@ framework — the only thing they share is a set of conventions.
 | Config lives in `config.json`, read at startup | Edit it, then fully exit the tray icon and relaunch — a running process never re-reads it |
 | Tray icon generated in code (`icon.py`) | No binary asset to keep in sync |
 
-## Install and run
+## Quick start
 
 ```
 python -m venv venv
@@ -48,8 +60,8 @@ venv\Scripts\python -m pip install -r requirements.txt
 run.bat
 ```
 
-`run.bat` launches the app from `venv\` with no console window. Windows only - these use Win32 APIs and a
-system tray.
+`run.bat` launches the app from `venv\` with no console window. See [Known limitations](#known-limitations)
+for platform requirements.
 
 ## Tests
 
