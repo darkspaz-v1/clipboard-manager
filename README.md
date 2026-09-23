@@ -4,6 +4,8 @@
 
 A searchable history of everything you have copied, recallable without leaving the keyboard.
 
+![Clipboard Manager preview](docs/images/clipboard-manager-preview.png)
+
 ![Clipboard History popup showing a searchable list of recent clips against a dark UI](docs/media/screenshot.png)
 
 Windows keeps one clipboard slot, so copying anything destroys what was there before. This watches the
